@@ -24,6 +24,22 @@ from cv_bridge import CvBridge, CvBridgeError
 -Send over selected topic
 """
 
+def read_image(name, resize, publisher, bridge):
+    # Read image
+    image = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+    # If no image found, break
+    if image is None:
+        return False
+    else:
+        # else
+        # Resize if necessary
+        if (args.resize == 'true'):
+            image = cv2.resize(image, (int(args.width), int(args.height)))
+        # Translate into ROS message
+        # publish image
+        publisher.publish(bridge.cv2_to_imgmsg(image, "mono8"))
+        return True
+
 parser = argparse.ArgumentParser(description='Take images from a saved sequence and send them over a topic.')
 parser.add_argument('--topic', action='store', default='/camera/image_raw')
 parser.add_argument('--src', action='store', default='./data/')
@@ -33,7 +49,8 @@ parser.add_argument('--start', action='store', default=0, type=int)
 parser.add_argument('--ext', action='store', default='jpg')
 parser.add_argument('--width', action='store', default=640, type=int)
 parser.add_argument('--height', action='store', default=480, type=int)
-parser.add_argument('--resize', action='store', default=False)
+parser.add_argument('--resize', action='store', default='false')
+parser.add_argument('--type', action='store', default='master')
 
 args = parser.parse_args()
 
@@ -54,21 +71,10 @@ prev_time = time.time()
 while True:
     name = prefix_full + str(image_id) + '.' + ext
     #print(name)
-    #Read image
-    image = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
-    #If no image found, break
-    if image is None:
+    if not read_image(name, args.resize, publisher, bridge):
         break
-    else:
-    #else
-        #Resize if necessary
-        if (args.resize):
-            image = cv2.resize(image, (int(args.width), int(args.height)))
-        #Translate into ROS message
-        #publish image
-        publisher.publish(bridge.cv2_to_imgmsg(image, "mono8"))
-        #increase counter
-        image_id = image_id + 1
+    #increase counter
+    image_id = image_id + 1
 
     cur_time = time.time()
     delta_time = cur_time - prev_time
