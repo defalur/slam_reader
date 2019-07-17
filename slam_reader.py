@@ -31,6 +31,9 @@ parser.add_argument('--fps', action='store', default=4, type=int)
 parser.add_argument('--prefix', action='store', default='image_')
 parser.add_argument('--start', action='store', default=0, type=int)
 parser.add_argument('--ext', action='store', default='jpg')
+parser.add_argument('--width', action='store', default=640, type=int)
+parser.add_argument('--height', action='store', default=480, type=int)
+parser.add_argument('--resize', action='store', default=False)
 
 args = parser.parse_args()
 
@@ -58,6 +61,9 @@ while True:
         break
     else:
     #else
+        #Resize if necessary
+        if (args.resize):
+            image = cv2.resize(image, (int(args.width), int(args.height)))
         #Translate into ROS message
         #publish image
         publisher.publish(bridge.cv2_to_imgmsg(image, "mono8"))
