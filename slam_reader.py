@@ -50,6 +50,7 @@ expected_delay = 1.0 / args.fps
 prev_time = time.time()
 while True:
     name = prefix_full + str(image_id) + '.' + ext
+    #print(name)
     #Read image
     image = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
     #If no image found, break
