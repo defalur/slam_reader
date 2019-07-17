@@ -11,7 +11,7 @@ class ImageReader(GenericReader):
         self.ext = ext
 
     def read(self):
-        name = prefix_full + str(frame_id) + '.' + ext
+        name = self.prefix + str(self.frame_id) + '.' + self.ext
         self.frame_id += 1
         return cv2.imread(name, cv2.IMREAD_GRAYSCALE)
 
@@ -21,5 +21,5 @@ class VideoReader(GenericReader):
         self.capture = cv2.VideoCapture(path)
 
     def read(self):
-        ret, frame = cap.read()
+        ret, frame = self.capture.read()
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

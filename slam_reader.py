@@ -17,6 +17,7 @@ import socket
 from sensor_msgs.msg import Image
 import std_msgs
 from cv_bridge import CvBridge, CvBridgeError
+from video_reader import ImageReader, VideoReader, GenericReader
 
 """
 -Init node as a publisher over selected topic
