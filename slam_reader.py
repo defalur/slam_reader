@@ -15,6 +15,7 @@ import argparse
 import rospy
 import socket
 from sensor_msgs.msg import Image
+import std_msgs
 from cv_bridge import CvBridge, CvBridgeError
 
 """
@@ -40,6 +41,19 @@ def read_image(name, resize, publisher, bridge):
         publisher.publish(bridge.cv2_to_imgmsg(image, "mono8"))
         return True
 
+def slave_cb(msg):
+    print('Received:', msg.data)
+    if not msg.data:
+        exit(0)
+    global image_id
+    global ext
+    name = prefix_full + str(image_id) + '.' + ext
+    # print(name)
+    if not read_image(name, args.resize, publisher, bridge):
+        exit(0)
+    # increase counter
+    image_id = image_id + 1
+
 parser = argparse.ArgumentParser(description='Take images from a saved sequence and send them over a topic.')
 parser.add_argument('--topic', action='store', default='/camera/image_raw')
 parser.add_argument('--src', action='store', default='./data/')
@@ -64,13 +78,24 @@ rospy.init_node('slam_reader', anonymous=True)
 
 image_id = args.start
 prefix_full = args.src + args.prefix
-tmp = raw_input("Waiting")
 ext = args.ext
+
+master_publisher = None
+if args.type == 'master':
+    master_publisher = rospy.Publisher('/slam_reader/master', std_msgs.msg.Bool, queue_size=10)
+    tmp = raw_input("Waiting")
+else:
+    slave_subscriber = rospy.Subscriber('/slam_reader/master', std_msgs.msg.Bool, slave_cb)
+    rospy.spin()
+
 expected_delay = 1.0 / args.fps
 prev_time = time.time()
-while True:
+while not rospy.is_shutdown():
     name = prefix_full + str(image_id) + '.' + ext
     #print(name)
+    #Send signal to all slave that they should send the image
+    if master_publisher is not None:
+        master_publisher.publish(True)
     if not read_image(name, args.resize, publisher, bridge):
         break
     #increase counter
@@ -81,3 +106,7 @@ while True:
     prev_time = cur_time
     if delta_time < expected_delay:
         time.sleep(expected_delay - delta_time)
+
+#send shutdown message to all slaves
+if master_publisher is not None:
+    master_publisher.publish(False)
