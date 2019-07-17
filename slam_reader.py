@@ -25,16 +25,17 @@ from cv_bridge import CvBridge, CvBridgeError
 -Send over selected topic
 """
 
-def read_image(name, resize, publisher, bridge):
+def read_image(resize, publisher, bridge):
+    global reader
     # Read image
-    image = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+    image = reader.read()
     # If no image found, break
     if image is None:
         return False
     else:
         # else
         # Resize if necessary
-        if (args.resize == 'true'):
+        if resize == 'true':
             image = cv2.resize(image, (int(args.width), int(args.height)))
         # Translate into ROS message
         # publish image
@@ -45,14 +46,9 @@ def slave_cb(msg):
     print('Received:', msg.data)
     if not msg.data:
         exit(0)
-    global image_id
-    global ext
-    name = prefix_full + str(image_id) + '.' + ext
     # print(name)
-    if not read_image(name, args.resize, publisher, bridge):
+    if not read_image(args.resize, publisher, bridge):
         exit(0)
-    # increase counter
-    image_id = image_id + 1
 
 parser = argparse.ArgumentParser(description='Take images from a saved sequence and send them over a topic.')
 parser.add_argument('--topic', action='store', default='/camera/image_raw')
@@ -65,6 +61,7 @@ parser.add_argument('--width', action='store', default=640, type=int)
 parser.add_argument('--height', action='store', default=480, type=int)
 parser.add_argument('--resize', action='store', default='false')
 parser.add_argument('--type', action='store', default='master')
+parser.add_argument('--filetype', action='store', default='video')
 
 args = parser.parse_args()
 
@@ -80,6 +77,12 @@ image_id = args.start
 prefix_full = args.src + args.prefix
 ext = args.ext
 
+reader = None
+if args.filetype == 'video':
+    reader = VideoReader(src_dir)
+else:
+    reader = ImageReader(src_dir, args.prefix, image_id, ext)
+
 master_publisher = None
 if args.type == 'master':
     master_publisher = rospy.Publisher('/slam_reader/master', std_msgs.msg.Bool, queue_size=10)
@@ -91,15 +94,11 @@ else:
 expected_delay = 1.0 / args.fps
 prev_time = time.time()
 while not rospy.is_shutdown():
-    name = prefix_full + str(image_id) + '.' + ext
-    #print(name)
     #Send signal to all slave that they should send the image
     if master_publisher is not None:
         master_publisher.publish(True)
-    if not read_image(name, args.resize, publisher, bridge):
+    if not read_image(args.resize, publisher, bridge):
         break
-    #increase counter
-    image_id = image_id + 1
 
     cur_time = time.time()
     delta_time = cur_time - prev_time
